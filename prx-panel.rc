@@ -1,0 +1,18 @@
+#!/sbin/openrc-run
+
+command="/usr/local/prx-panel/prx-panel"
+command_background=true
+pidfile="/run/prx-panel.pid"
+description="prx-panel Service"
+procname="prx-panel"
+depend() {
+    need net
+}
+start_pre(){
+    cd /usr/local/prx-panel
+}
+reload() {
+  ebegin "Reloading ${RC_SVCNAME}"
+  kill -USR1 $(cat $pidfile)
+  eend $?
+}

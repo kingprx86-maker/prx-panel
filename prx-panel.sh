@@ -90,10 +90,10 @@ fi
 if [[ "${running_in_docker}" == "true" ]]; then
     xui_folder="${XUI_MAIN_FOLDER:=/app}"
 else
-    xui_folder="${XUI_MAIN_FOLDER:=/usr/local/x-ui}"
+    xui_folder="${XUI_MAIN_FOLDER:=/usr/local/prx-panel}"
 fi
 xui_service="${XUI_SERVICE:=/etc/systemd/system}"
-log_folder="${XUI_LOG_FOLDER:=/var/log/x-ui}"
+log_folder="${XUI_LOG_FOLDER:=/var/log/prx-panel}"
 mkdir -p "${log_folder}"
 iplimit_log_path="${log_folder}/3xipl.log"
 iplimit_banned_log_path="${log_folder}/3xipl-banned.log"
@@ -129,7 +129,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/kingprx86-maker/prx-panel/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/lfprx/3prx-panel/main/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -140,7 +140,7 @@ install() {
 }
 
 update() {
-    confirm "This function will update all x-ui components to the latest version, and the data will not be lost. Do you want to continue?" "y"
+    confirm "This function will update all prx-panel components to the latest version, and the data will not be lost. Do you want to continue?" "y"
     if [[ $? != 0 ]]; then
         LOGE "Cancelled"
         if [[ $# == 0 ]]; then
@@ -148,7 +148,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/kingprx86-maker/prx-panel/main/update.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/lfprx/3prx-panel/main/update.sh)
     if [[ $? == 0 ]]; then
         LOGI "Update is complete, Panel has automatically restarted "
         before_show_menu
@@ -156,7 +156,7 @@ update() {
 }
 
 update_dev() {
-    confirm "This will update x-ui to the latest DEV commit (the rolling 'dev-latest' build, not a stable release). Your data is preserved. Continue?" "y"
+    confirm "This will update prx-panel to the latest DEV commit (the rolling 'dev-latest' build, not a stable release). Your data is preserved. Continue?" "y"
     if [[ $? != 0 ]]; then
         LOGE "Cancelled"
         if [[ $# == 0 ]]; then
@@ -166,7 +166,7 @@ update_dev() {
     fi
     # XUI_UPDATE_TAG tells update.sh to install the dev-latest pre-release
     # instead of the latest stable tag.
-    XUI_UPDATE_TAG="dev-latest" bash <(curl -Ls https://raw.githubusercontent.com/kingprx86-maker/prx-panel/main/update.sh)
+    XUI_UPDATE_TAG="dev-latest" bash <(curl -Ls https://raw.githubusercontent.com/lfprx/3prx-panel/main/update.sh)
     if [[ $? == 0 ]]; then
         LOGI "Dev update is complete, Panel has automatically restarted "
         before_show_menu
@@ -176,11 +176,11 @@ update_dev() {
 replace_xui_script() {
     local url="$1"
     local use_if_modified_since="$2"
-    local temp_file="/usr/bin/x-ui-temp.$$"
+    local temp_file="/usr/bin/prx-panel-temp.$$"
 
     rm -f "$temp_file"
     if [[ "$use_if_modified_since" == "true" ]]; then
-        curl -fLRo "$temp_file" -z /usr/bin/x-ui "$url"
+        curl -fLRo "$temp_file" -z /usr/bin/prx-panel "$url"
     else
         curl -fLRo "$temp_file" "$url"
     fi
@@ -191,20 +191,20 @@ replace_xui_script() {
 
     if [[ ! -s "$temp_file" ]]; then
         rm -f "$temp_file"
-        # -z above means "not modified since /usr/bin/x-ui" rather than a
+        # -z above means "not modified since /usr/bin/prx-panel" rather than a
         # real failure, so an empty download here is success, not an error.
         [[ "$use_if_modified_since" == "true" ]] && return 0
         return 1
     fi
 
-    mv -f "$temp_file" /usr/bin/x-ui
+    mv -f "$temp_file" /usr/bin/prx-panel
     if [[ $? != 0 ]]; then
         rm -f "$temp_file"
         return 1
     fi
     # The move already landed the new script; a transient chmod failure here
     # shouldn't make callers think the whole replace failed.
-    chmod +x /usr/bin/x-ui
+    chmod +x /usr/bin/prx-panel
     return 0
 }
 
@@ -219,8 +219,8 @@ update_menu() {
         return 0
     fi
 
-    if replace_xui_script "https://raw.githubusercontent.com/kingprx86-maker/prx-panel/main/x-ui.sh" "false"; then
-        chmod +x ${xui_folder}/x-ui.sh
+    if replace_xui_script "https://raw.githubusercontent.com/lfprx/3prx-panel/main/prx-panel.sh" "false"; then
+        chmod +x ${xui_folder}/prx-panel.sh
         echo -e "${green}Update successful. The panel has automatically restarted.${plain}"
         exit 0
     else
@@ -238,7 +238,7 @@ legacy_version() {
         exit 1
     fi
     # Use the entered panel version in the download link
-    install_command="bash <(curl -Ls "https://raw.githubusercontent.com/kingprx86-maker/prx-panel/main/install.sh") v$tag_version"
+    install_command="bash <(curl -Ls "https://raw.githubusercontent.com/mhsanaei/3prx-panel/v$tag_version/install.sh") v$tag_version"
 
     echo "Downloading and installing panel version $tag_version..."
     eval $install_command
@@ -253,13 +253,13 @@ delete_script() {
 xui_env_file_path() {
     case "${release}" in
         ubuntu | debian | armbian)
-            echo "/etc/default/x-ui"
+            echo "/etc/default/prx-panel"
             ;;
         arch | manjaro | parch | alpine)
-            echo "/etc/conf.d/x-ui"
+            echo "/etc/conf.d/prx-panel"
             ;;
         *)
-            echo "/etc/sysconfig/x-ui"
+            echo "/etc/sysconfig/prx-panel"
             ;;
     esac
 }
@@ -275,12 +275,12 @@ uninstall() {
 
     if [[ $release == "alpine" ]]; then
         rc-service prx-panel stop
-        rc-update del x-ui
-        rm /etc/init.d/x-ui -f
+        rc-update del prx-panel
+        rm /etc/init.d/prx-panel -f
     else
-        systemctl stop x-ui
-        systemctl disable x-ui
-        rm ${xui_service}/x-ui.service -f
+        systemctl stop prx-panel
+        systemctl disable prx-panel
+        rm ${xui_service}/prx-panel.service -f
         systemctl daemon-reload
         systemctl reset-failed
     fi
@@ -292,7 +292,7 @@ uninstall() {
         panel_used_postgres="true"
     fi
 
-    rm /etc/x-ui/ -rf
+    rm /etc/prx-panel/ -rf
     rm ${xui_folder}/ -rf
     rm -f "$db_env_file"
 
@@ -303,7 +303,7 @@ uninstall() {
     echo ""
     echo -e "Uninstalled Successfully.\n"
     echo "If you need to install this panel again, you can use below command:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/kingprx86-maker/prx-panel/main/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3prx-panel/master/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -326,15 +326,15 @@ reset_user() {
 
     read -rp "Do you want to disable currently configured two-factor authentication? (y/n): " twoFactorConfirm
     if [[ $twoFactorConfirm != "y" && $twoFactorConfirm != "Y" ]]; then
-        ${xui_folder}/x-ui setting -username "${config_account}" -password "${config_password}" > /dev/null 2>&1
+        ${xui_folder}/prx-panel setting -username "${config_account}" -password "${config_password}" > /dev/null 2>&1
     else
-        ${xui_folder}/x-ui setting -username "${config_account}" -password "${config_password}" -resetTwoFactor=true > /dev/null 2>&1
+        ${xui_folder}/prx-panel setting -username "${config_account}" -password "${config_password}" -resetTwoFactor=true > /dev/null 2>&1
         echo -e "Two factor authentication has been disabled."
     fi
 
     echo -e "Panel login username has been reset to: ${green} ${config_account} ${plain}"
     echo -e "Panel login password has been reset to: ${green} ${config_password} ${plain}"
-    echo -e "${green} Please use the new login username and password to access the X-UI panel. Also remember them! ${plain}"
+    echo -e "${green} Please use the new login username and password to access the PRX Panel panel. Also remember them! ${plain}"
     confirm_restart
 }
 
@@ -357,7 +357,7 @@ reset_webbasepath() {
     config_webBasePath=$(gen_random_string 18)
 
     # Apply the new web base path setting
-    ${xui_folder}/x-ui setting -webBasePath "${config_webBasePath}" > /dev/null 2>&1
+    ${xui_folder}/prx-panel setting -webBasePath "${config_webBasePath}" > /dev/null 2>&1
 
     echo -e "Web base path has been reset to: ${green}${config_webBasePath}${plain}"
     echo -e "${green}Please use the new web base path to access the panel.${plain}"
@@ -372,13 +372,13 @@ reset_config() {
         fi
         return 0
     fi
-    ${xui_folder}/x-ui setting -reset
+    ${xui_folder}/prx-panel setting -reset
     echo -e "All panel settings have been reset to default."
     restart
 }
 
 check_config() {
-    local info=$(${xui_folder}/x-ui setting -show true)
+    local info=$(${xui_folder}/prx-panel setting -show true)
     if [[ $? != 0 ]]; then
         LOGE "get current settings error, please check logs"
         show_menu
@@ -395,12 +395,12 @@ check_config() {
         dsn_safe="$(echo "$dsn" | sed -E 's|(://[^:/@]+:)[^@]+@|\1****@|')"
         echo -e "${green}Database: PostgreSQL — ${dsn_safe}${plain}"
     else
-        echo -e "${green}Database: SQLite (/etc/x-ui/x-ui.db)${plain}"
+        echo -e "${green}Database: SQLite (/etc/prx-panel/prx-panel.db)${plain}"
     fi
 
     local existing_webBasePath=$(echo "$info" | grep -Eo 'webBasePath: .+' | awk '{print $2}')
     local existing_port=$(echo "$info" | grep -Eo 'port: .+' | awk '{print $2}')
-    local existing_cert=$(${xui_folder}/x-ui setting -getCert true | grep 'cert:' | awk -F': ' '{print $2}' | tr -d '[:space:]')
+    local existing_cert=$(${xui_folder}/prx-panel setting -getCert true | grep 'cert:' | awk -F': ' '{print $2}' | tr -d '[:space:]')
     local URL_lists=(
         "https://api4.ipify.org"
         "https://ipv4.icanhazip.com"
@@ -484,7 +484,7 @@ set_port() {
         LOGD "Cancelled"
         before_show_menu
     else
-        ${xui_folder}/x-ui setting -port ${port}
+        ${xui_folder}/prx-panel setting -port ${port}
         echo -e "The port is set, Please restart the panel now, and use the new port ${green}${port}${plain} to access web panel"
         confirm_restart
     fi
@@ -508,12 +508,12 @@ start() {
         if [[ $release == "alpine" ]]; then
             rc-service prx-panel start
         else
-            systemctl start x-ui
+            systemctl start prx-panel
         fi
         sleep 2
         check_status
         if [[ $? == 0 ]]; then
-            LOGI "x-ui Started Successfully"
+            LOGI "prx-panel Started Successfully"
         else
             LOGE "panel Failed to start, Probably because it takes longer than two seconds to start, Please check the log information later"
         fi
@@ -542,12 +542,12 @@ stop() {
         if [[ $release == "alpine" ]]; then
             rc-service prx-panel stop
         else
-            systemctl stop x-ui
+            systemctl stop prx-panel
         fi
         sleep 2
         check_status
         if [[ $? == 1 ]]; then
-            LOGI "x-ui and xray stopped successfully"
+            LOGI "prx-panel and xray stopped successfully"
         else
             LOGE "Panel stop failed, Probably because the stop time exceeds two seconds, Please check the log information later"
         fi
@@ -570,7 +570,7 @@ restart() {
         sleep 2
         check_status
         if [[ $? == 0 ]]; then
-            LOGI "x-ui and xray Restarted successfully"
+            LOGI "prx-panel and xray Restarted successfully"
         else
             LOGE "Panel restart failed, Please check the log information later"
         fi
@@ -582,12 +582,12 @@ restart() {
     if [[ $release == "alpine" ]]; then
         rc-service prx-panel restart
     else
-        systemctl restart x-ui
+        systemctl restart prx-panel
     fi
     sleep 2
     check_status
     if [[ $? == 0 ]]; then
-        LOGI "x-ui and xray Restarted successfully"
+        LOGI "prx-panel and xray Restarted successfully"
     else
         LOGE "Panel restart failed, Probably because it takes longer than two seconds to start, Please check the log information later"
     fi
@@ -611,9 +611,9 @@ restart_xray() {
         return 0
     fi
     if [[ $release == "alpine" ]]; then
-        rc-service x-ui reload
+        rc-service prx-panel reload
     else
-        systemctl reload x-ui
+        systemctl reload prx-panel
     fi
     LOGI "xray-core Restart signal sent successfully, Please check the log information to confirm whether xray restarted successfully"
     sleep 2
@@ -634,7 +634,7 @@ status() {
     if [[ $release == "alpine" ]]; then
         rc-service prx-panel status
     else
-        systemctl status x-ui -l
+        systemctl status prx-panel -l
     fi
     if [[ $# == 0 ]]; then
         before_show_menu
@@ -651,14 +651,14 @@ enable() {
         return 0
     fi
     if [[ $release == "alpine" ]]; then
-        rc-update add x-ui default
+        rc-update add prx-panel default
     else
-        systemctl enable x-ui
+        systemctl enable prx-panel
     fi
     if [[ $? == 0 ]]; then
-        LOGI "x-ui Set to boot automatically on startup successfully"
+        LOGI "prx-panel Set to boot automatically on startup successfully"
     else
-        LOGE "x-ui Failed to set Autostart"
+        LOGE "prx-panel Failed to set Autostart"
     fi
 
     if [[ $# == 0 ]]; then
@@ -676,14 +676,14 @@ disable() {
         return 0
     fi
     if [[ $release == "alpine" ]]; then
-        rc-update del x-ui
+        rc-update del prx-panel
     else
-        systemctl disable x-ui
+        systemctl disable prx-panel
     fi
     if [[ $? == 0 ]]; then
-        LOGI "x-ui Autostart Cancelled successfully"
+        LOGI "prx-panel Autostart Cancelled successfully"
     else
-        LOGE "x-ui Failed to cancel autostart"
+        LOGE "prx-panel Failed to cancel autostart"
     fi
 
     if [[ $# == 0 ]]; then
@@ -702,7 +702,7 @@ show_log() {
                 show_menu
                 ;;
             1)
-                grep -F 'x-ui[' /var/log/messages
+                grep -F 'prx-panel[' /var/log/messages
                 if [[ $# == 0 ]]; then
                     before_show_menu
                 fi
@@ -723,7 +723,7 @@ show_log() {
                 show_menu
                 ;;
             1)
-                journalctl -u x-ui -e --no-pager -f -p debug
+                journalctl -u prx-panel -e --no-pager -f -p debug
                 if [[ $# == 0 ]]; then
                     before_show_menu
                 fi
@@ -773,14 +773,14 @@ disable_bbr() {
         before_show_menu
     fi
 
-    if [ -f "/etc/sysctl.d/99-bbr-x-ui.conf" ]; then
-        old_settings=$(head -1 /etc/sysctl.d/99-bbr-x-ui.conf | tr -d '#')
+    if [ -f "/etc/sysctl.d/99-bbr-prx-panel.conf" ]; then
+        old_settings=$(head -1 /etc/sysctl.d/99-bbr-prx-panel.conf | tr -d '#')
         # sysctl -w already restores the live values, so no `sysctl --system`
         # afterwards — it would re-apply every sysctl file on the host and
         # surface unrelated errors from the distro's own defaults (see issue #5160)
         sysctl -w net.core.default_qdisc="${old_settings%:*}"
         sysctl -w net.ipv4.tcp_congestion_control="${old_settings#*:}"
-        rm /etc/sysctl.d/99-bbr-x-ui.conf
+        rm /etc/sysctl.d/99-bbr-prx-panel.conf
     else
         # Replace BBR with CUBIC configurations
         if [ -f "/etc/sysctl.conf" ]; then
@@ -809,7 +809,7 @@ enable_bbr() {
             echo "#$(sysctl -n net.core.default_qdisc):$(sysctl -n net.ipv4.tcp_congestion_control)"
             echo "net.core.default_qdisc = fq"
             echo "net.ipv4.tcp_congestion_control = bbr"
-        } > "/etc/sysctl.d/99-bbr-x-ui.conf"
+        } > "/etc/sysctl.d/99-bbr-prx-panel.conf"
         if [ -f "/etc/sysctl.conf" ]; then
             # Backup old settings from sysctl.conf, if any
             sed -i 's/^net.core.default_qdisc/# &/' /etc/sysctl.conf
@@ -818,7 +818,7 @@ enable_bbr() {
         # Apply only our config file; `sysctl --system` would re-apply every
         # sysctl file on the host and surface unrelated errors from the distro's
         # own defaults (see issue #5160)
-        sysctl -p /etc/sysctl.d/99-bbr-x-ui.conf
+        sysctl -p /etc/sysctl.d/99-bbr-prx-panel.conf
     else
         sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
         sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
@@ -836,7 +836,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    if replace_xui_script "https://github.com/kingprx86-maker/prx-panel/raw/main/x-ui.sh" "true"; then
+    if replace_xui_script "https://github.com/lfprx/3prx-panel/raw/main/prx-panel.sh" "true"; then
         LOGI "Upgrade script succeeded, Please rerun the script"
         before_show_menu
     else
@@ -847,7 +847,7 @@ update_shell() {
 }
 
 xui_pid() {
-    ps -ef 2> /dev/null | grep -F "${xui_folder}/x-ui" | grep -v grep | awk 'NR==1 {print $1}'
+    ps -ef 2> /dev/null | grep -F "${xui_folder}/prx-panel" | grep -v grep | awk 'NR==1 {print $1}'
 }
 
 signal_xui() {
@@ -862,7 +862,7 @@ signal_xui() {
 # 0: running, 1: not running, 2: not installed
 check_status() {
     if [[ "${running_in_docker}" == "true" ]]; then
-        if [[ ! -x "${xui_folder}/x-ui" ]]; then
+        if [[ ! -x "${xui_folder}/prx-panel" ]]; then
             return 2
         fi
         if [[ -n "$(xui_pid)" ]]; then
@@ -872,7 +872,7 @@ check_status() {
         fi
     fi
     if [[ $release == "alpine" ]]; then
-        if [[ ! -f /etc/init.d/x-ui ]]; then
+        if [[ ! -f /etc/init.d/prx-panel ]]; then
             return 2
         fi
         if [[ $(rc-service prx-panel status | grep -F 'status: started' -c) == 1 ]]; then
@@ -881,10 +881,10 @@ check_status() {
             return 1
         fi
     else
-        if [[ ! -f ${xui_service}/x-ui.service ]]; then
+        if [[ ! -f ${xui_service}/prx-panel.service ]]; then
             return 2
         fi
-        temp=$(systemctl status x-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+        temp=$(systemctl status prx-panel | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
         if [[ "${temp}" == "running" ]]; then
             return 0
         else
@@ -895,13 +895,13 @@ check_status() {
 
 check_enabled() {
     if [[ $release == "alpine" ]]; then
-        if [[ $(rc-update show | grep -F 'x-ui' | grep default -c) == 1 ]]; then
+        if [[ $(rc-update show | grep -F 'prx-panel' | grep default -c) == 1 ]]; then
             return 0
         else
             return 1
         fi
     else
-        temp=$(systemctl is-enabled x-ui)
+        temp=$(systemctl is-enabled prx-panel)
         if [[ "${temp}" == "enabled" ]]; then
             return 0
         else
@@ -1386,9 +1386,9 @@ ssl_cert_issue_main() {
 
                     # If the panel currently serves this domain's cert, clear the stored paths
                     # so it stops loading the now-deleted files, then restart.
-                    local existing_cert=$(${xui_folder}/x-ui setting -getCert true | grep 'cert:' | awk -F': ' '{print $2}' | tr -d '[:space:]')
+                    local existing_cert=$(${xui_folder}/prx-panel setting -getCert true | grep 'cert:' | awk -F': ' '{print $2}' | tr -d '[:space:]')
                     if [[ "${existing_cert}" == "/root/cert/${domain}/"* ]]; then
-                        ${xui_folder}/x-ui cert -reset
+                        ${xui_folder}/prx-panel cert -reset
                         LOGI "Cleared panel certificate paths referencing ${domain}; restarting panel."
                         restart
                     fi
@@ -1435,7 +1435,7 @@ ssl_cert_issue_main() {
             fi
             # The panel's configured certificate may live outside /root/cert
             # (e.g. certbot under /etc/letsencrypt) — show it too (#5070).
-            local panel_cert=$(${xui_folder}/x-ui setting -getCert true | grep 'cert:' | awk -F': ' '{print $2}' | tr -d '[:space:]')
+            local panel_cert=$(${xui_folder}/prx-panel setting -getCert true | grep 'cert:' | awk -F': ' '{print $2}' | tr -d '[:space:]')
             if [[ -n "${panel_cert}" && "${panel_cert}" != /root/cert/* ]]; then
                 echo -e "Panel certificate (custom path): ${panel_cert}"
                 if [[ -f "${panel_cert}" ]] && command -v openssl > /dev/null 2>&1; then
@@ -1454,7 +1454,7 @@ ssl_cert_issue_main() {
                 read -rp "Certificate file path (fullchain): " webCertFile
                 read -rp "Private key file path: " webKeyFile
                 if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then
-                    ${xui_folder}/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+                    ${xui_folder}/prx-panel cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
                     echo "Panel certificate paths set:"
                     echo "  - Certificate File: $webCertFile"
                     echo "  - Private Key File: $webKeyFile"
@@ -1478,7 +1478,7 @@ ssl_cert_issue_main() {
                     local webKeyFile="/root/cert/${domain}/privkey.pem"
 
                     if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then
-                        ${xui_folder}/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+                        ${xui_folder}/prx-panel cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
                         echo "Panel paths set for domain: $domain"
                         echo "  - Certificate File: $webCertFile"
                         echo "  - Private Key File: $webKeyFile"
@@ -1525,8 +1525,8 @@ ssl_cert_issue_for_ip() {
     LOGI "Starting automatic SSL certificate generation for server IP..."
     LOGI "Using Let's Encrypt shortlived profile (~6 days validity, auto-renews)"
 
-    local existing_webBasePath=$(${xui_folder}/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
-    local existing_port=$(${xui_folder}/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
+    local existing_webBasePath=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
+    local existing_port=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
 
     # Get server IP
     local URL_lists=(
@@ -1660,7 +1660,7 @@ ssl_cert_issue_for_ip() {
     done
 
     # Reload command - restarts panel after renewal
-    local reloadCmd="systemctl restart x-ui 2>/dev/null || rc-service prx-panel restart 2>/dev/null"
+    local reloadCmd="systemctl restart prx-panel 2>/dev/null || rc-service prx-panel restart 2>/dev/null"
 
     # issue the certificate for IP with shortlived profile
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt --force
@@ -1717,7 +1717,7 @@ ssl_cert_issue_for_ip() {
     read -rp "Would you like to set this certificate for the panel? (y/n): " setPanel
     if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then
         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-            ${xui_folder}/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+            ${xui_folder}/prx-panel cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
             LOGI "Panel paths set for IP: $server_ip"
             LOGI "  - Certificate File: $webCertFile"
             LOGI "  - Private Key File: $webKeyFile"
@@ -1737,8 +1737,8 @@ ssl_cert_issue_for_ip() {
 }
 
 ssl_cert_issue() {
-    local existing_webBasePath=$(${xui_folder}/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
-    local existing_port=$(${xui_folder}/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
+    local existing_webBasePath=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
+    local existing_port=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
     # check for acme.sh first
     if ! command -v ~/.acme.sh/acme.sh &> /dev/null; then
         echo "acme.sh could not be found. we will install it"
@@ -1938,7 +1938,7 @@ ssl_cert_issue() {
         local webKeyFile="/root/cert/${domain}/privkey.pem"
 
         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-            ${xui_folder}/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+            ${xui_folder}/prx-panel cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
             LOGI "Panel paths set for domain: $domain"
             LOGI "  - Certificate File: $webCertFile"
             LOGI "  - Private Key File: $webKeyFile"
@@ -1953,8 +1953,8 @@ ssl_cert_issue() {
 }
 
 ssl_cert_issue_CF() {
-    local existing_webBasePath=$(${xui_folder}/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
-    local existing_port=$(${xui_folder}/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
+    local existing_webBasePath=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
+    local existing_port=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
     LOGI "****** Instructions for Use ******"
     LOGI "Follow the steps below to complete the process:"
     LOGI "1. A Cloudflare API Token (recommended, scoped to Zone:DNS:Edit) or the Global API Key + registered email."
@@ -2087,7 +2087,7 @@ ssl_cert_issue_CF() {
             local webKeyFile="${certPath}/privkey.pem"
 
             if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-                ${xui_folder}/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+                ${xui_folder}/prx-panel cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
                 LOGI "Panel paths set for domain: $CF_Domain"
                 LOGI "  - Certificate File: $webCertFile"
                 LOGI "  - Private Key File: $webKeyFile"
@@ -2192,7 +2192,7 @@ iplimit_main() {
         3)
             confirm "Proceed with Unbanning everyone from IP Limit jail?" "y"
             if [[ $? == 0 ]]; then
-                fail2ban-client reload --restart --unban prx-ipl
+                fail2ban-client reload --restart --unban 3x-ipl
                 truncate -s 0 "${iplimit_banned_log_path}"
                 echo -e "${green}All users Unbanned successfully.${plain}"
                 iplimit_main
@@ -2209,7 +2209,7 @@ iplimit_main() {
             read -rp "Enter the IP address you want to ban: " ban_ip
             ip_validation
             if [[ $ban_ip =~ $ipv4_regex || $ban_ip =~ $ipv6_regex ]]; then
-                fail2ban-client set prx-ipl banip "$ban_ip"
+                fail2ban-client set 3x-ipl banip "$ban_ip"
                 echo -e "${green}IP Address ${ban_ip} has been banned successfully.${plain}"
             else
                 echo -e "${red}Invalid IP address format! Please try again.${plain}"
@@ -2220,7 +2220,7 @@ iplimit_main() {
             read -rp "Enter the IP address you want to unban: " unban_ip
             ip_validation
             if [[ $unban_ip =~ $ipv4_regex || $unban_ip =~ $ipv6_regex ]]; then
-                fail2ban-client set prx-ipl unbanip "$unban_ip"
+                fail2ban-client set 3x-ipl unbanip "$unban_ip"
                 echo -e "${green}IP Address ${unban_ip} has been unbanned successfully.${plain}"
             else
                 echo -e "${red}Invalid IP address format! Please try again.${plain}"
@@ -2272,7 +2272,7 @@ setup_fail2ban_iplimit() {
         # minimal server images (Debian 12+, Ubuntu 24+, fresh RHEL-family).
         # Without `nft` in PATH the default sshd jail fails to ban with
         #   stderr: '/bin/sh: 1: nft: not found'
-        # even though our own prx-ipl jail uses iptables. Bundling the binary
+        # even though our own 3x-ipl jail uses iptables. Bundling the binary
         # at install time prevents that confusing log spam for new installs.
         case "${release}" in
             ubuntu)
@@ -2373,7 +2373,7 @@ setup_fail2ban_iplimit() {
 
 # install_iplimit is the interactive (menu) entry point: it runs the shared
 # setup and then returns to the menu. The non-interactive installer path uses
-# setup_fail2ban_iplimit directly via `x-ui setup-fail2ban`.
+# setup_fail2ban_iplimit directly via `prx-panel setup-fail2ban`.
 install_iplimit() {
     setup_fail2ban_iplimit
     before_show_menu
@@ -2386,9 +2386,9 @@ remove_iplimit() {
     read -rp "Choose an option: " num
     case "$num" in
         1)
-            rm -f /etc/fail2ban/filter.d/prx-ipl.conf
-            rm -f /etc/fail2ban/action.d/prx-ipl.conf
-            rm -f /etc/fail2ban/jail.d/prx-ipl.conf
+            rm -f /etc/fail2ban/filter.d/3x-ipl.conf
+            rm -f /etc/fail2ban/action.d/3x-ipl.conf
+            rm -f /etc/fail2ban/jail.d/3x-ipl.conf
             if [[ $release == "alpine" ]]; then
                 rc-service fail2ban restart
             else
@@ -2466,7 +2466,7 @@ show_banlog() {
 
     if [[ -f "$system_log" ]]; then
         echo -e "${green}Recent system ban activities from fail2ban.log:${plain}"
-        grep "prx-ipl" "$system_log" | grep -E "Ban|Unban" | tail -n 10 || echo -e "${yellow}No recent system ban activities found${plain}"
+        grep "3x-ipl" "$system_log" | grep -E "Ban|Unban" | tail -n 10 || echo -e "${yellow}No recent system ban activities found${plain}"
         echo ""
     fi
 
@@ -2482,7 +2482,7 @@ show_banlog() {
     fi
 
     echo -e "\n${green}Current jail status:${plain}"
-    fail2ban-client status prx-ipl || echo -e "${yellow}Unable to get jail status${plain}"
+    fail2ban-client status 3x-ipl || echo -e "${yellow}Unable to get jail status${plain}"
 }
 
 create_iplimit_jails() {
@@ -2497,19 +2497,19 @@ create_iplimit_jails() {
         sed -i '0,/action =/s/backend = auto/backend = systemd/' /etc/fail2ban/jail.conf
     fi
 
-    cat << EOF > /etc/fail2ban/jail.d/prx-ipl.conf
-[prx-ipl]
+    cat << EOF > /etc/fail2ban/jail.d/3x-ipl.conf
+[3x-ipl]
 enabled=true
 backend=auto
-filter=prx-ipl
-action=prx-ipl
+filter=3x-ipl
+action=3x-ipl
 logpath=${iplimit_log_path}
 maxretry=1
 findtime=32
 bantime=${bantime}m
 EOF
 
-    cat << EOF > /etc/fail2ban/filter.d/prx-ipl.conf
+    cat << EOF > /etc/fail2ban/filter.d/3x-ipl.conf
 [Definition]
 datepattern = ^%%Y/%%m/%%d %%H:%%M:%%S
 failregex   = \[LIMIT_IP\]\s*Email\s*=\s*<F-USER>.+</F-USER>\s*\|\|\s*Disconnecting OLD IP\s*=\s*<ADDR>\s*\|\|\s*Timestamp\s*=\s*\d+
@@ -2524,11 +2524,11 @@ EOF
     ssh_ports=$(grep -oP '^[[:space:]]*Port[[:space:]]+\K[0-9]+' /etc/ssh/sshd_config 2>/dev/null | paste -sd, -)
     [[ -z "${ssh_ports}" ]] && ssh_ports="22"
     local panel_port
-    panel_port=$(${xui_folder}/x-ui setting -show true 2>/dev/null | grep -Eo 'port: .+' | awk '{print $2}')
+    panel_port=$(${xui_folder}/prx-panel setting -show true 2>/dev/null | grep -Eo 'port: .+' | awk '{print $2}')
     local exempt_ports="${ssh_ports}"
     [[ -n "${panel_port}" ]] && exempt_ports="${exempt_ports},${panel_port}"
 
-    cat << EOF > /etc/fail2ban/action.d/prx-ipl.conf
+    cat << EOF > /etc/fail2ban/action.d/3x-ipl.conf
 [INCLUDES]
 before = iptables-allports.conf
 
@@ -2567,10 +2567,10 @@ iplimit_remove_conflicts() {
     )
 
     for file in "${jail_files[@]}"; do
-        # Check for [prx-ipl] config in jail file then remove it
-        if test -f "${file}" && grep -qw 'prx-ipl' ${file}; then
-            sed -i "/\[prx-ipl\]/,/^$/d" ${file}
-            echo -e "${yellow}Removing conflicts of [prx-ipl] in jail (${file})!${plain}\n"
+        # Check for [3x-ipl] config in jail file then remove it
+        if test -f "${file}" && grep -qw '3x-ipl' ${file}; then
+            sed -i "/\[3x-ipl\]/,/^$/d" ${file}
+            echo -e "${yellow}Removing conflicts of [3x-ipl] in jail (${file})!${plain}\n"
         fi
     done
 }
@@ -2607,11 +2607,11 @@ SSH_port_forwarding() {
         done
     fi
 
-    local existing_webBasePath=$(${xui_folder}/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
-    local existing_port=$(${xui_folder}/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
-    local existing_listenIP=$(${xui_folder}/x-ui setting -getListen true | grep -Eo 'listenIP: .+' | awk '{print $2}')
-    local existing_cert=$(${xui_folder}/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(${xui_folder}/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_webBasePath=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
+    local existing_port=$(${xui_folder}/prx-panel setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
+    local existing_listenIP=$(${xui_folder}/prx-panel setting -getListen true | grep -Eo 'listenIP: .+' | awk '{print $2}')
+    local existing_cert=$(${xui_folder}/prx-panel setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(${xui_folder}/prx-panel setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     local config_listenIP=""
     local listen_choice=""
@@ -2652,7 +2652,7 @@ SSH_port_forwarding() {
                 config_listenIP="127.0.0.1"
                 [[ "$listen_choice" == "2" ]] && read -rp "Enter custom IP to listen on: " config_listenIP
 
-                ${xui_folder}/x-ui setting -listenIP "${config_listenIP}" > /dev/null 2>&1
+                ${xui_folder}/prx-panel setting -listenIP "${config_listenIP}" > /dev/null 2>&1
                 echo -e "${green}listen IP has been set to ${config_listenIP}.${plain}"
                 echo -e "\n${green}SSH Port Forwarding Configuration:${plain}"
                 echo -e "Standard SSH command:"
@@ -2668,7 +2668,7 @@ SSH_port_forwarding() {
             fi
             ;;
         2)
-            ${xui_folder}/x-ui setting -listenIP 0.0.0.0 > /dev/null 2>&1
+            ${xui_folder}/prx-panel setting -listenIP 0.0.0.0 > /dev/null 2>&1
             echo -e "${green}Listen IP has been cleared.${plain}"
             restart
             ;;
@@ -2874,7 +2874,7 @@ pg_ensure_hba_password_auth() {
     local tmp
     tmp=$(mktemp) || return 1
     {
-        echo "# Added by PRX Panel: allow password logins for the panel database."
+        echo "# Added by 3prx-panel: allow password logins for the panel database."
         echo "host    ${pg_db}    all    127.0.0.1/32    md5"
         echo "host    ${pg_db}    all    ::1/128         md5"
         cat "${hba_file}"
@@ -3154,8 +3154,8 @@ pg_install_server_action() {
 
 # Copies the current SQLite data into PostgreSQL, then switches the panel over.
 migrate_to_postgres() {
-    if [[ ! -x "${xui_folder}/x-ui" ]]; then
-        LOGE "x-ui is not installed."
+    if [[ ! -x "${xui_folder}/prx-panel" ]]; then
+        LOGE "prx-panel is not installed."
         return 1
     fi
     echo ""
@@ -3200,7 +3200,7 @@ migrate_to_postgres() {
 
     echo ""
     LOGI "Migrating data into PostgreSQL..."
-    if ! ${xui_folder}/x-ui migrate-db --dsn "$dsn"; then
+    if ! ${xui_folder}/prx-panel migrate-db --dsn "$dsn"; then
         LOGE "Migration failed. The panel was NOT switched to PostgreSQL."
         start 0 > /dev/null 2>&1
         return 1
@@ -3284,23 +3284,23 @@ postgresql_menu() {
 }
 
 # Convert between the panel's SQLite database and a portable .dump (SQL text)
-# file using the bundled x-ui binary. With no arguments it dumps the installed
+# file using the bundled prx-panel binary. With no arguments it dumps the installed
 # panel database; an optional second argument overrides the output path.
 #   prx-panel migrateDB [file.db|file.dump] [output]
 migrate_db() {
     local input="$1" output="$2"
-    local default_db="/etc/x-ui/x-ui.db"
-    local bin="${xui_folder}/x-ui"
+    local default_db="/etc/prx-panel/prx-panel.db"
+    local bin="${xui_folder}/prx-panel"
 
     [[ -z "$input" ]] && input="$default_db"
 
     if [[ ! -x "$bin" ]]; then
-        LOGE "x-ui binary not found at ${bin}. Is the panel installed?"
+        LOGE "prx-panel binary not found at ${bin}. Is the panel installed?"
         return 1
     fi
 
     if ! "$bin" migrate-db -h 2>&1 | grep -q -- '-dump'; then
-        LOGE "This x-ui build does not support .db <-> .dump conversion yet."
+        LOGE "This prx-panel build does not support .db <-> .dump conversion yet."
         LOGE "Update the panel first (prx-panel update) to a version with 'migrate-db --dump/--restore'."
         return 1
     fi
@@ -3344,7 +3344,7 @@ migrate_db() {
     else
         [[ -z "$output" ]] && output="${input%.*}.db"
         if [[ "$output" == "$default_db" ]] && check_status > /dev/null 2>&1; then
-            LOGE "Refusing to restore into the live database (${default_db}) while x-ui is running."
+            LOGE "Refusing to restore into the live database (${default_db}) while prx-panel is running."
             LOGE "Stop the panel first (prx-panel stop) or choose a different output path."
             return 1
         fi
@@ -3367,7 +3367,7 @@ migrate_db() {
 # Interactive wrapper around migrate_db for the menu: prompts for the paths and
 # lets migrate_db auto-detect the direction.
 migrate_db_prompt() {
-    local default_db="/etc/x-ui/x-ui.db"
+    local default_db="/etc/prx-panel/prx-panel.db"
     local input output
     echo -e "Convert between a SQLite ${green}.db${plain} and a portable ${green}.dump${plain} (direction auto-detected)."
     read -rp "Input file [${default_db}]: " input
@@ -3378,9 +3378,9 @@ migrate_db_prompt() {
 
 show_usage() {
     echo -e "┌────────────────────────────────────────────────────────────────┐
-│  ${blue}x-ui control menu usages (subcommands):${plain}                       │
+│  ${blue}prx-panel control menu usages (subcommands):${plain}                       │
 │                                                                │
-│  ${blue}x-ui${plain}                       - Admin Management Script          │
+│  ${blue}prx-panel${plain}                       - Admin Management Script          │
 │  ${blue}prx-panel start${plain}                 - Start                            │
 │  ${blue}prx-panel stop${plain}                  - Stop                             │
 │  ${blue}prx-panel restart${plain}               - Restart                          │
@@ -3405,7 +3405,7 @@ show_usage() {
 show_menu() {
     echo -e "
 ╔────────────────────────────────────────────────╗
-│  ${green}PRX Panel Management Script${plain}                │
+│  ${green}3PRX Panel Panel Management Script${plain}                │
 │  ${green}0.${plain} Exit Script                               │
 │────────────────────────────────────────────────│
 │  ${green}1.${plain} Install                                   │

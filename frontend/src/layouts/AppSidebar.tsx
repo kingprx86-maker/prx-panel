@@ -39,9 +39,9 @@ import { pauseAnimationsUntilLeave, useTheme } from '@/hooks/useTheme';
 import { useAllSettings } from '@/api/queries/useAllSettings';
 import './AppSidebar.css';
 
-const DONATE_URL = 'https://donate.sanaei.dev/';
-const DOCS_URL = 'https://docs.sanaei.dev/';
-const REPO_URL = 'https://github.com/MHSanaei/3x-ui';
+const DONATE_URL = 'https://t.me/lfprx';
+const DOCS_URL = 'https://t.me/lfprx';
+const REPO_URL = 'https://github.com/kingprx86-maker/prx-panel';
 const LOGOUT_KEY = '__logout__';
 const RAIL_WIDTH = 72;
 const railStyle = { '--sider-rail': `${RAIL_WIDTH}px` } as CSSProperties;
@@ -274,7 +274,7 @@ export default function AppSidebar() {
       >
         <div className="sider-brand">
           <div className="brand-block">
-            <span className="brand-text">{railCollapsed ? '3X' : '3X-UI'}</span>
+            <span className="brand-text">{railCollapsed ? 'P' : 'PRX Panel'}</span>
           </div>
           {!railCollapsed && (
             <div className="brand-actions">
@@ -328,7 +328,7 @@ export default function AppSidebar() {
       >
         <div className="drawer-header">
           <div className="brand-block">
-            <span className="drawer-brand">3X-UI</span>
+            <span className="drawer-brand">PRX Panel</span>
           </div>
           <div className="drawer-header-actions">
             <DocsButton ariaLabel={t('menu.docs') || 'Documentation'} />
